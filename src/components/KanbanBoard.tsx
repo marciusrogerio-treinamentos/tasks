@@ -1,171 +1,185 @@
-import React, { useState } from 'react';
-import TaskCard from './TaskCard';
-import AddTaskModal from './AddTaskModal';
-import EditTaskModal from './EditTaskModal';
-import { Task } from '../types';
+import React, { useState, useEffect } from 'react'
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd'
+import { Task } from '../lib/supabase'
+import TaskCard from './TaskCard'
+import AddTaskModal from './AddTaskModal'
+import EditTaskModal from './EditTaskModal'
+import { taskService } from '../services/taskService'
 
 const KanbanBoard: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Exemplo de Tarefa',
-      startDate: '2024-04-20',
-      deadline: '2024-04-25',
-      endDate: null,
-      status: 'todo'
-    }
-  ]);
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   const columns = [
     { id: 'backlog', title: 'Backlog', color: '#9e9e9e', icon: 'inbox' },
     { id: 'todo', title: 'A Fazer', color: '#2196F3', icon: 'assignment' },
-    { id: 'doing', title: 'Em Andamento', color: '#FFC107', icon: 'play_circle' },
+    { id: 'doing', title: 'Em Andamento', color: '#FF9800', icon: 'play_circle' },
     { id: 'waiting', title: 'Aguardando', color: '#9C27B0', icon: 'hourglass_empty' },
     { id: 'done', title: 'Concluído', color: '#4CAF50', icon: 'check_circle' }
-  ];
+  ]
 
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData('taskId', taskId);
-  };
+  useEffect(() => {
+    loadTasks()
+  }, [])
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  const loadTasks = async () => {
+    try {
+      const loadedTasks = await taskService.getTasks()
+      setTasks(loadedTasks)
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error)
+    }
+  }
 
-  const handleDrop = (e: React.DragEvent, newStatus: Task['status']) => {
-    e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    ));
-  };
+  const handleAddTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newTask = await taskService.createTask(taskData)
+      setTasks(prev => [...prev, newTask])
+      setIsAddModalOpen(false)
+    } catch (error) {
+      console.error('Erro ao adicionar tarefa:', error)
+    }
+  }
 
-  const handleEditTask = (task: Task) => {
-    setTasks(tasks.map(t => 
-      t.id === task.id ? task : t
-    ));
-  };
+  const handleEditTask = async (task: Task) => {
+    try {
+      const updatedTask = await taskService.updateTask(task)
+      setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t))
+      setIsEditModalOpen(false)
+      setSelectedTask(null)
+    } catch (error) {
+      console.error('Erro ao editar tarefa:', error)
+    }
+  }
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
-  };
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await taskService.deleteTask(taskId)
+      setTasks(prev => prev.filter(task => task.id !== taskId))
+      setIsEditModalOpen(false)
+      setSelectedTask(null)
+    } catch (error) {
+      console.error('Erro ao excluir tarefa:', error)
+    }
+  }
 
-  const handleAddTask = (taskData: { title: string; startDate: string; deadline: number }) => {
-    const task: Task = {
-      id: Date.now().toString(),
-      title: taskData.title,
-      startDate: taskData.startDate,
-      deadline: taskData.deadline,
-      endDate: calculateEndDate(taskData.startDate, taskData.deadline),
-      status: 'backlog'
-    };
+  const handleDragEnd = async (result: DropResult) => {
+    if (!result.destination) return
 
-    setTasks([...tasks, task]);
-  };
+    const { source, destination, draggableId } = result
 
-  const calculateEndDate = (startDate: string, deadline: number): string => {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + deadline);
-    return date.toISOString().split('T')[0];
-  };
+    if (source.droppableId === destination.droppableId) return
 
-  const handleEditClick = (task: Task) => {
-    setSelectedTask(task);
-    setIsEditModalOpen(true);
-  };
+    const task = tasks.find(t => t.id === draggableId)
+    if (!task) return
+
+    // Atualizar o estado local imediatamente para feedback visual
+    const updatedTask = {
+      ...task,
+      status: destination.droppableId as Task['status']
+    }
+    
+    setTasks(prev => prev.map(t => t.id === draggableId ? updatedTask : t))
+
+    try {
+      // Persistir a mudança no Supabase
+      const savedTask = await taskService.updateTask(updatedTask)
+      console.log('Tarefa atualizada com sucesso:', savedTask)
+    } catch (error) {
+      console.error('Erro ao atualizar status da tarefa:', error)
+      // Reverter a mudança em caso de erro
+      setTasks(prev => prev.map(t => t.id === draggableId ? task : t))
+    }
+  }
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col s12">
-          <div className="card">
-            <div className="card-content">
-              <div className="card-title">
-                <div className="row">
-                  <div className="col s8">
-                    <h4 className="grey-text text-darken-2">Quadro Kanban</h4>
-                  </div>
-                  <div className="col s4 right-align">
-                    <button
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="btn waves-effect waves-light blue"
-                    >
-                      <i className="material-icons left">add</i>
-                      Nova Tarefa
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <AddTaskModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onAddTask={handleAddTask}
-              />
-
-              {selectedTask && (
-                <EditTaskModal
-                  isOpen={isEditModalOpen}
-                  onClose={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedTask(null);
+    <div className="kanban-board">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        {columns.map(column => (
+          <div key={column.id} className="kanban-column">
+            <div className="kanban-column-header">
+              <span className="kanban-column-title" style={{ color: column.color }}>
+                <i className="material-icons">{column.icon}</i>
+                {column.title}
+              </span>
+              <span className="badge blue">{tasks.filter(task => task.status === column.id).length}</span>
+            </div>
+            <Droppable droppableId={column.id}>
+              {(provided, snapshot) => (
+                <div
+                  className="kanban-tasks"
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  style={{
+                    background: snapshot.isDraggingOver ? 'rgba(0, 0, 0, 0.05)' : 'transparent',
+                    minHeight: '100px'
                   }}
-                  onSave={handleEditTask}
-                  onDelete={handleDeleteTask}
-                  task={selectedTask}
-                />
-              )}
-
-              <div className="kanban-board">
-                {columns.map(column => (
-                  <div
-                    key={column.id}
-                    className="kanban-column"
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, column.id as Task['status'])}
-                  >
-                    <div className="kanban-column-header">
-                      <h5 className="kanban-column-title">
-                        <span className="material-icons" style={{ color: column.color, fontSize: '24px' }}>
-                          {column.icon}
-                        </span>
-                        {column.title}
-                      </h5>
-                      <span className="badge" style={{ backgroundColor: column.color }}>
-                        {tasks.filter(task => task.status === column.id).length}
-                      </span>
-                    </div>
-                    
-                    <div className="kanban-tasks">
-                      {tasks
-                        .filter(task => task.status === column.id)
-                        .map(task => (
+                >
+                  {tasks
+                    .filter(task => task.status === column.id)
+                    .map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
                           <div
-                            key={task.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              opacity: snapshot.isDragging ? 0.8 : 1,
+                              marginBottom: '8px'
+                            }}
                           >
                             <TaskCard
                               task={task}
-                              onEdit={handleEditClick}
-                              onDelete={handleDeleteTask}
+                              onEdit={() => {
+                                setSelectedTask(task)
+                                setIsEditModalOpen(true)
+                              }}
+                              onDelete={() => handleDeleteTask(task.id)}
                             />
                           </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                        )}
+                      </Draggable>
+                    ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+        ))}
+      </DragDropContext>
 
-export default KanbanBoard; 
+      <button
+        className="btn-floating btn-large waves-effect waves-light blue"
+        onClick={() => setIsAddModalOpen(true)}
+        style={{ position: 'fixed', bottom: '20px', right: '20px' }}
+      >
+        <i className="material-icons">add</i>
+      </button>
+
+      <AddTaskModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddTask}
+      />
+
+      {selectedTask && (
+        <EditTaskModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setSelectedTask(null)
+          }}
+          task={selectedTask}
+          onEdit={handleEditTask}
+          onDelete={handleDeleteTask}
+        />
+      )}
+    </div>
+  )
+}
+
+export default KanbanBoard 

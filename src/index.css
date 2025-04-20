@@ -225,6 +225,73 @@ body {
   color: white;
 }
 
+/* Estilos para o modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.modal h4 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--text-color);
+}
+
+.modal .input-field {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para os botões do modal */
+.modal-footer .btn-flat.red-text {
+  color: #F44336;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.modal-footer .btn-flat.red-text:hover {
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.modal-footer .btn-flat {
+  color: #757575;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.modal-footer .btn-flat:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 1400px) {
   .kanban-board {
     grid-template-columns: repeat(3, 1fr);
@@ -319,4 +386,28 @@ body {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Estilos para os campos de input e labels */
+.input-field input:focus + label,
+.input-field input:not(:placeholder-shown) + label {
+  transform: translateY(-14px) scale(0.8);
+  color: var(--primary-color);
+}
+
+.input-field input {
+  margin-bottom: 0.5rem;
+}
+
+.input-field label {
+  color: #757575;
+  transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.input-field input[type=date] {
+  margin-top: 1rem;
+}
+
+.input-field input[type=number] {
+  margin-top: 1rem;
 } 

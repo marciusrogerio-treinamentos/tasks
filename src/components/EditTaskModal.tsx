@@ -1,114 +1,109 @@
-import React from 'react';
-import { Task } from '../types';
+import React, { useState, useEffect } from 'react'
+import { Task } from '../lib/supabase'
 
 interface EditTaskModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (task: Task) => void;
-  onDelete: (taskId: string) => void;
-  task: Task;
+  isOpen: boolean
+  onClose: () => void
+  task: Task
+  onEdit: (task: Task) => void
+  onDelete: (taskId: string) => void
 }
 
-const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onSave, onDelete, task }) => {
-  const [editedTask, setEditedTask] = React.useState<Task>(task);
+const EditTaskModal: React.FC<EditTaskModalProps> = ({
+  isOpen,
+  onClose,
+  task,
+  onEdit,
+  onDelete
+}) => {
+  const [editedTask, setEditedTask] = useState<Task>(task)
 
-  React.useEffect(() => {
-    setEditedTask(task);
-  }, [task]);
+  useEffect(() => {
+    setEditedTask(task)
+  }, [task])
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(editedTask);
-    onClose();
-  };
+    e.preventDefault()
+    onEdit(editedTask)
+  }
 
   const handleDelete = () => {
     if (window.confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      onDelete(task.id);
-      onClose();
+      onDelete(task.id)
+      onClose()
     }
-  };
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Editar Tarefa</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Título</label>
+    <div className="modal">
+      <div className="modal-content">
+        <h4>Editar Tarefa</h4>
+        <form onSubmit={handleSubmit}>
+          <div className="input-field">
             <input
               type="text"
+              id="title"
               value={editedTask.title}
               onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
+              placeholder=" "
             />
+            <label htmlFor="title">Título da Tarefa</label>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Data de Início</label>
+          <div className="input-field">
             <input
               type="date"
-              value={editedTask.startDate}
-              onChange={(e) => setEditedTask({ ...editedTask, startDate: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              id="startDate"
+              value={editedTask.start_date}
+              onChange={(e) => setEditedTask({ ...editedTask, start_date: e.target.value })}
               required
+              placeholder=" "
             />
+            <label htmlFor="startDate">Data de Início</label>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Prazo (dias)</label>
+          <div className="input-field">
             <input
               type="number"
+              id="deadline"
               value={editedTask.deadline}
-              onChange={(e) => setEditedTask({ ...editedTask, deadline: parseInt(e.target.value) })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              onChange={(e) => setEditedTask({ ...editedTask, deadline: Number(e.target.value) })}
               min="1"
               required
+              placeholder=" "
             />
+            <label htmlFor="deadline">Prazo em Dias</label>
           </div>
 
-          <div className="flex justify-between mt-6">
+          <div className="modal-footer">
             <button
               type="button"
+              className="modal-close waves-effect waves-light btn-flat red-text"
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              Excluir Tarefa
+              Excluir
             </button>
-            <div className="space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Salvar
-              </button>
-            </div>
+            <button
+              type="button"
+              className="modal-close waves-effect waves-light btn-flat"
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="waves-effect waves-light btn blue"
+            >
+              Salvar
+            </button>
           </div>
         </form>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default EditTaskModal; 
+export default EditTaskModal 
